@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DocuUpload Prototype</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="upload-container">
+        <div class="upload-box" id="drop-zone">
+            <div class="icon">📁</div>
+            <p>Drag & Drop your document here</p>
+            <span>or</span>
+            <button type="button" id="browse-btn">Browse Files</button>
+            <input type="file" id="file-input" hidden>
+        </div>
+
+        <div class="file-details" id="file-details" style="display: none;">
+            <div class="file-info">
+                <span id="file-name">document_name.pdf</span>
+                <span id="file-size">0 KB</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress-fill"></div>
+            </div>
+            <p id="status-text">Ready to upload</p>
+            <button id="upload-btn">Upload Now</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
