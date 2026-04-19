@@ -1,1138 +1,1425 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>TRUTH-SHIELD — Detect Misinformation Before It Spreads</title>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TruthScan — Fake News & Deepfake Detector</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;700;900&family=Figtree:wght@300;400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #06080f;
-    --bg2: #0b0f1a;
-    --bg3: #111827;
-    --teal: #00d4c8;
-    --teal2: #00bfb3;
-    --teal-dim: rgba(0,212,200,0.12);
-    --teal-glow: rgba(0,212,200,0.25);
-    --white: #ffffff;
-    --gray: #9ca3af;
-    --gray2: #6b7280;
-    --border: rgba(255,255,255,0.07);
-    --border2: rgba(0,212,200,0.25);
-    --font-head: 'Syne', sans-serif;
-    --font-body: 'Inter', sans-serif;
+    --bg: #060608;
+    --surface: #0e0e12;
+    --surface2: #16161c;
+    --border: #1f1f2a;
+    --border2: #2e2e3d;
+    --green: #00e676;
+    --green-dim: #00e67620;
+    --red: #ff1744;
+    --red-dim: #ff174420;
+    --amber: #ffab40;
+    --amber-dim: #ffab4020;
+    --blue: #448aff;
+    --blue-dim: #448aff20;
+    --text: #f0f0f8;
+    --muted: #5a5a72;
+    --muted2: #8a8aa0;
   }
 
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
 
   html { scroll-behavior: smooth; }
 
   body {
     background: var(--bg);
-    color: var(--white);
-    font-family: var(--font-body);
+    color: var(--text);
+    font-family: 'Figtree', sans-serif;
+    min-height: 100vh;
     overflow-x: hidden;
-    line-height: 1.6;
   }
 
-  /* ── NOISE TEXTURE OVERLAY ── */
+  /* Scanline overlay */
   body::before {
     content: '';
     position: fixed;
     inset: 0;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
     pointer-events: none;
-    z-index: 0;
-    opacity: 0.4;
+    z-index: 9999;
   }
 
-  /* ── NAVBAR ── */
+  /* ---- NAVBAR ---- */
   nav {
-    position: fixed;
-    top: 0; left: 0; right: 0;
-    z-index: 100;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 4rem;
-    height: 64px;
-    background: rgba(6,8,15,0.85);
-    backdrop-filter: blur(20px);
+    padding: 1.2rem 3rem;
     border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(6,6,8,0.92);
+    backdrop-filter: blur(12px);
   }
 
-  .nav-logo {
+  .logo {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 900;
+    letter-spacing: -0.02em;
     display: flex;
     align-items: center;
     gap: 10px;
-    font-family: var(--font-head);
-    font-weight: 700;
-    font-size: 15px;
-    letter-spacing: 0.12em;
-    color: var(--white);
-    text-decoration: none;
   }
 
-  .nav-logo svg { width: 24px; height: 24px; }
+  .logo-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+  }
 
   .nav-links {
     display: flex;
-    align-items: center;
-    gap: 2.5rem;
+    gap: 2rem;
     list-style: none;
   }
 
   .nav-links a {
-    font-size: 14px;
-    font-weight: 400;
-    color: var(--gray);
+    color: var(--muted2);
     text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
     transition: color 0.2s;
-    letter-spacing: 0.02em;
   }
 
-  .nav-links a:hover { color: var(--white); }
+  .nav-links a:hover { color: var(--text); }
 
-  /* ── HERO ── */
-  .hero {
-    position: relative;
-    min-height: 100vh;
+  .nav-badge {
+    background: var(--green-dim);
+    border: 1px solid var(--green);
+    color: var(--green);
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.05em;
+  }
+
+  /* ---- TICKER ---- */
+  .ticker {
+    background: var(--green);
+    overflow: hidden;
+    padding: 6px 0;
+  }
+
+  .ticker-inner {
     display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    padding: 80px 2rem 4rem;
+    gap: 3rem;
+    animation: ticker 30s linear infinite;
+    white-space: nowrap;
+  }
+
+  @keyframes ticker {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+
+  .ticker-item {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #000;
+    letter-spacing: 0.1em;
+  }
+
+  /* ---- HERO ---- */
+  .hero {
+    padding: 6rem 3rem 4rem;
+    position: relative;
     overflow: hidden;
   }
 
-  /* Radial glow behind hero text */
   .hero::after {
-    content: '';
+    content: 'TRUTH';
     position: absolute;
+    right: -2rem;
     top: 50%;
-    left: 50%;
-    transform: translate(-50%, -60%);
-    width: 700px;
-    height: 500px;
-    background: radial-gradient(ellipse at center, rgba(0,212,200,0.08) 0%, transparent 70%);
+    transform: translateY(-50%);
+    font-family: 'Unbounded', sans-serif;
+    font-size: 18vw;
+    font-weight: 900;
+    color: rgba(255,255,255,0.015);
     pointer-events: none;
-    z-index: 0;
+    letter-spacing: -0.05em;
+    line-height: 1;
   }
 
-  .hero > * { position: relative; z-index: 1; }
-
-  /* Floating grid lines */
-  .hero-grid {
-    position: absolute;
-    inset: 0;
-    background-image:
-      linear-gradient(rgba(0,212,200,0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(0,212,200,0.03) 1px, transparent 1px);
-    background-size: 60px 60px;
-    mask-image: radial-gradient(ellipse 80% 60% at 50% 40%, black 0%, transparent 100%);
-    pointer-events: none;
-    z-index: 0;
-  }
-
-  .badge {
+  .hero-tag {
     display: inline-flex;
     align-items: center;
-    gap: 7px;
-    background: rgba(0,212,200,0.1);
+    gap: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--muted2);
     border: 1px solid var(--border2);
-    border-radius: 999px;
-    padding: 6px 16px;
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--teal);
+    padding: 6px 14px;
+    border-radius: 4px;
     margin-bottom: 2rem;
-    letter-spacing: 0.03em;
-    animation: fadeDown 0.7s ease both;
+    letter-spacing: 0.1em;
   }
 
-  .badge svg { width: 14px; height: 14px; }
+  .hero-tag span { color: var(--green); }
 
-  .hero-title {
-    font-family: var(--font-head);
-    font-size: clamp(48px, 8vw, 88px);
-    font-weight: 800;
-    line-height: 1.05;
-    letter-spacing: -0.02em;
+  h1 {
+    font-family: 'Unbounded', sans-serif;
+    font-size: clamp(2.8rem, 6vw, 5.5rem);
+    font-weight: 900;
+    line-height: 0.95;
+    letter-spacing: -0.03em;
     margin-bottom: 1.5rem;
-    animation: fadeUp 0.8s 0.1s ease both;
+    max-width: 800px;
   }
 
-  .hero-title .accent { color: var(--teal); }
+  h1 em {
+    font-style: normal;
+    color: transparent;
+    -webkit-text-stroke: 1px var(--green);
+  }
 
   .hero-sub {
-    font-size: clamp(15px, 2vw, 18px);
-    color: var(--gray);
-    max-width: 560px;
-    margin: 0 auto 2.5rem;
-    font-weight: 300;
+    font-size: 1rem;
+    color: var(--muted2);
+    max-width: 480px;
     line-height: 1.7;
-    animation: fadeUp 0.8s 0.2s ease both;
+    margin-bottom: 3rem;
+    font-weight: 400;
   }
 
-  .hero-btns {
+  .hero-stats {
     display: flex;
-    align-items: center;
-    gap: 1rem;
-    flex-wrap: wrap;
-    justify-content: center;
-    margin-bottom: 4rem;
-    animation: fadeUp 0.8s 0.3s ease both;
+    gap: 3rem;
   }
 
-  .btn-primary {
+  .stat-item { 
+  .stat-num {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 1.6rem;
+    font-weight: 900;
+    color: var(--text);
+  }
+  .stat-label {
+    font-size: 0.75rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-top: 2px;
+  }
+  }
+
+  /* ---- API KEYS SECTION ---- */
+  .api-section {
+    padding: 2rem 3rem;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+
+  .api-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 1rem;
+    align-items: end;
+    max-width: 900px;
+  }
+
+  .field-label {
+    font-size: 0.7rem;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--muted2);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  input[type="text"], input[type="password"], textarea {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82rem;
+    padding: 10px 14px;
+    border-radius: 6px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  input[type="text"]:focus, input[type="password"]:focus, textarea:focus {
+    border-color: var(--green);
+  }
+
+  .btn {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    background: var(--teal);
-    color: #06080f;
-    font-family: var(--font-body);
-    font-weight: 600;
-    font-size: 15px;
-    padding: 13px 28px;
-    border-radius: 10px;
+    background: var(--green);
+    color: #000;
     border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-family: 'Figtree', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 700;
     cursor: pointer;
-    text-decoration: none;
-    transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
-    box-shadow: 0 0 28px rgba(0,212,200,0.3);
-    letter-spacing: 0.01em;
+    transition: all 0.2s;
+    white-space: nowrap;
+    letter-spacing: 0.02em;
   }
 
-  .btn-primary:hover {
-    background: var(--teal2);
-    transform: translateY(-2px);
-    box-shadow: 0 0 40px rgba(0,212,200,0.45);
+  .btn:hover {
+    background: #fff;
+    transform: translateY(-1px);
   }
 
-  .btn-primary:active { transform: scale(0.97); }
+  .btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+  }
 
   .btn-secondary {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    background: transparent;
-    color: var(--white);
-    font-family: var(--font-body);
-    font-weight: 500;
-    font-size: 15px;
-    padding: 13px 28px;
-    border-radius: 10px;
-    border: 1px solid var(--border);
-    cursor: pointer;
-    text-decoration: none;
-    transition: border-color 0.2s, background 0.2s, transform 0.15s;
-    letter-spacing: 0.01em;
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border2);
   }
 
   .btn-secondary:hover {
-    border-color: rgba(255,255,255,0.2);
-    background: rgba(255,255,255,0.04);
-    transform: translateY(-2px);
+    background: var(--border2);
+    border-color: var(--muted);
   }
 
-  /* ── STATS ── */
-  .stats {
+  .btn-red {
+    background: var(--red);
+    color: #fff;
+  }
+
+  .btn-red:hover { background: #ff4069; }
+
+  /* ---- TABS ---- */
+  .tools-section { padding: 3rem; }
+
+  .tabs {
+    display: flex;
+    gap: 0;
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    overflow: hidden;
+    width: fit-content;
+    margin-bottom: 2.5rem;
+  }
+
+  .tab-btn {
+    background: transparent;
+    border: none;
+    color: var(--muted2);
+    font-family: 'Figtree', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 10px 24px;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.02em;
     display: flex;
     align-items: center;
-    gap: 4rem;
-    flex-wrap: wrap;
-    justify-content: center;
-    animation: fadeUp 0.8s 0.45s ease both;
+    gap: 8px;
   }
 
-  .stat { text-align: center; }
+  .tab-btn.active {
+    background: var(--green);
+    color: #000;
+  }
 
-  .stat-num {
-    font-family: var(--font-head);
-    font-size: 32px;
+  .tab-btn:not(.active):hover {
+    background: var(--surface2);
+    color: var(--text);
+  }
+
+  .tab-icon { font-size: 14px; }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* ---- FAKE NEWS PANEL ---- */
+  .tool-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 2rem;
+    max-width: 860px;
+  }
+
+  .tool-title {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 1.1rem;
     font-weight: 700;
-    color: var(--teal);
-    display: block;
-    line-height: 1.1;
+    letter-spacing: -0.01em;
+    margin-bottom: 0.4rem;
   }
 
-  .stat-lbl {
-    font-size: 13px;
-    color: var(--gray2);
-    margin-top: 4px;
-    letter-spacing: 0.03em;
+  .tool-desc {
+    font-size: 0.85rem;
+    color: var(--muted2);
+    margin-bottom: 1.5rem;
+    line-height: 1.6;
   }
 
-  .stat-divider {
-    width: 1px;
-    height: 40px;
-    background: var(--border);
+  .input-row {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-end;
+    margin-bottom: 1rem;
   }
 
-  /* scroll indicator */
-  .scroll-hint {
-    position: absolute;
-    bottom: 2rem;
-    left: 50%;
-    transform: translateX(-50%);
+  .input-row .field { flex: 1; }
+
+  textarea {
+    resize: vertical;
+    min-height: 80px;
+    line-height: 1.6;
+    font-size: 0.85rem;
+  }
+
+  /* ---- RESULTS ---- */
+  .result-box {
+    margin-top: 1.5rem;
+    display: none;
+  }
+
+  .verdict-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.2rem 1.5rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    border: 1px solid;
+  }
+
+  .verdict-banner.real {
+    background: var(--green-dim);
+    border-color: var(--green);
+  }
+
+  .verdict-banner.fake {
+    background: var(--red-dim);
+    border-color: var(--red);
+  }
+
+  .verdict-banner.uncertain {
+    background: var(--amber-dim);
+    border-color: var(--amber);
+  }
+
+  .verdict-label {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    opacity: 0.7;
+    margin-bottom: 4px;
+  }
+
+  .verdict-text {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 1.4rem;
+    font-weight: 900;
+    letter-spacing: -0.02em;
+  }
+
+  .verdict-banner.real .verdict-text { color: var(--green); }
+  .verdict-banner.fake .verdict-text { color: var(--red); }
+  .verdict-banner.uncertain .verdict-text { color: var(--amber); }
+
+  .confidence-ring {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 6px;
-    opacity: 0.4;
-    z-index: 1;
-    animation: fadeUp 1s 1s ease both;
+    gap: 4px;
   }
 
-  .scroll-hint span { font-size: 11px; letter-spacing: 0.1em; color: var(--gray); text-transform: uppercase; }
-
-  .scroll-mouse {
-    width: 22px;
-    height: 36px;
-    border: 1.5px solid var(--gray2);
-    border-radius: 12px;
-    position: relative;
+  .ring-num {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 1.8rem;
+    font-weight: 900;
   }
 
-  .scroll-mouse::after {
-    content: '';
-    position: absolute;
-    top: 6px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 3px;
-    height: 6px;
-    background: var(--teal);
-    border-radius: 2px;
-    animation: scrollDot 1.6s infinite;
+  .ring-label {
+    font-size: 0.65rem;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    opacity: 0.6;
   }
 
-  /* ── FEATURES SECTION ── */
-  .section {
-    padding: 6rem 4rem;
-    position: relative;
-    z-index: 1;
+  .sources-grid {
+    display: grid;
+    gap: 0.6rem;
   }
 
-  .section-tag {
-    display: inline-block;
-    font-size: 12px;
+  .source-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem 1.2rem;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    transition: border-color 0.2s;
+    text-decoration: none;
+  }
+
+  .source-card:hover { border-color: var(--border2); }
+
+  .source-title {
+    font-size: 0.85rem;
+    color: var(--text);
+    font-weight: 500;
+    line-height: 1.4;
+    margin-bottom: 4px;
+  }
+
+  .source-meta {
+    font-size: 0.72rem;
+    color: var(--muted2);
+    font-family: 'JetBrains Mono', monospace;
+    display: flex;
+    gap: 12px;
+  }
+
+  .source-badge {
+    flex-shrink: 0;
+    font-size: 0.65rem;
+    font-family: 'JetBrains Mono', monospace;
     font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 4px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .badge-verified {
+    background: var(--green-dim);
+    color: var(--green);
+    border: 1px solid var(--green);
+  }
+
+  .badge-unverified {
+    background: var(--amber-dim);
+    color: var(--amber);
+    border: 1px solid var(--amber);
+  }
+
+  .analysis-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.2rem 1.5rem;
+    margin-top: 1rem;
+  }
+
+  .analysis-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted2);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .analysis-title::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    flex-shrink: 0;
+  }
+
+  .analysis-text {
+    font-size: 0.87rem;
+    color: var(--muted2);
+    line-height: 1.7;
+  }
+
+  /* ---- DEEPFAKE PANEL ---- */
+  .upload-zone {
+    border: 2px dashed var(--border2);
+    border-radius: 12px;
+    padding: 3rem 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .upload-zone:hover, .upload-zone.dragover {
+    border-color: var(--blue);
+    background: var(--blue-dim);
+  }
+
+  .upload-zone input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+  }
+
+  .upload-icon {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+    display: block;
+    filter: grayscale(1);
+    opacity: 0.4;
+  }
+
+  .upload-title {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 700;
+    margin-bottom: 0.4rem;
+  }
+
+  .upload-sub {
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+
+  .preview-area {
+    display: none;
+    gap: 2rem;
+    align-items: flex-start;
+    margin-top: 1.5rem;
+  }
+
+  .preview-img {
+    width: 240px;
+    height: 240px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 1px solid var(--border2);
+    flex-shrink: 0;
+  }
+
+  .deepfake-result {
+    flex: 1;
+  }
+
+  .meter-bar {
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+    margin: 8px 0 1rem;
+  }
+
+  .meter-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 1s ease;
+  }
+
+  .meter-fill.safe { background: var(--green); }
+  .meter-fill.warning { background: var(--amber); }
+  .meter-fill.danger { background: var(--red); }
+
+  .analysis-indicators {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    margin-top: 1rem;
+  }
+
+  .indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.78rem;
+    color: var(--muted2);
+  }
+
+  .indicator-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* ---- LOADING ---- */
+  .loading-state {
+    display: none;
+    align-items: center;
+    gap: 12px;
+    padding: 1.5rem;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-top: 1rem;
+  }
+
+  .spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--border2);
+    border-top-color: var(--green);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    flex-shrink: 0;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .loading-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--muted2);
+  }
+
+  /* ---- ERROR ---- */
+  .error-box {
+    display: none;
+    background: var(--red-dim);
+    border: 1px solid var(--red);
+    border-radius: 8px;
+    padding: 1rem 1.2rem;
+    margin-top: 1rem;
+    font-size: 0.83rem;
+    color: var(--red);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* ---- FOOTER ---- */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 2rem 3rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 4rem;
+  }
+
+  .footer-logo {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 900;
+    opacity: 0.3;
+  }
+
+  .footer-text {
+    font-size: 0.75rem;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* Glitch effect on logo */
+  .logo-text {
+    position: relative;
+  }
+
+  /* ---- HOW IT WORKS ---- */
+  .how-section {
+    padding: 3rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .section-eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--green);
     letter-spacing: 0.15em;
     text-transform: uppercase;
-    color: var(--teal);
     margin-bottom: 1rem;
   }
 
   .section-title {
-    font-family: var(--font-head);
-    font-size: clamp(28px, 4vw, 44px);
-    font-weight: 700;
-    line-height: 1.15;
-    margin-bottom: 1rem;
-    letter-spacing: -0.01em;
-  }
-
-  .section-sub {
-    font-size: 16px;
-    color: var(--gray);
-    max-width: 500px;
-    line-height: 1.7;
-  }
-
-  .features-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 1px;
-    margin-top: 4rem;
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    overflow: hidden;
-  }
-
-  .feat-card {
-    background: var(--bg2);
-    padding: 2rem;
-    transition: background 0.25s;
-    position: relative;
-  }
-
-  .feat-card:hover { background: var(--bg3); }
-
-  .feat-card::after {
-    content: '';
-    position: absolute;
-    bottom: 0; left: 0; right: 0;
-    height: 1px;
-    background: var(--border);
-  }
-
-  .feat-icon {
-    width: 44px;
-    height: 44px;
-    background: var(--teal-dim);
-    border: 1px solid var(--border2);
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 1.25rem;
-  }
-
-  .feat-icon svg { width: 20px; height: 20px; color: var(--teal); }
-
-  .feat-title {
-    font-family: var(--font-head);
-    font-size: 17px;
-    font-weight: 600;
-    margin-bottom: 8px;
-    color: var(--white);
-  }
-
-  .feat-desc {
-    font-size: 14px;
-    color: var(--gray);
-    line-height: 1.65;
-  }
-
-  /* ── IMAGE / DEMO SECTION ── */
-  .demo-section {
-    padding: 4rem;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 4rem;
-    align-items: center;
-    position: relative;
-    z-index: 1;
-  }
-
-  .demo-section::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(180deg, transparent, rgba(0,212,200,0.03), transparent);
-    pointer-events: none;
-  }
-
-  .demo-text { position: relative; z-index: 1; }
-
-  .demo-visual {
-    position: relative;
-    z-index: 1;
-  }
-
-  .demo-frame {
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    overflow: hidden;
-    box-shadow: 0 32px 80px rgba(0,0,0,0.5), 0 0 0 1px var(--border);
-  }
-
-  .demo-top-bar {
-    background: var(--bg3);
-    padding: 12px 16px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .dot { width: 10px; height: 10px; border-radius: 50%; }
-  .dot-r { background: #ff5f57; }
-  .dot-y { background: #febc2e; }
-  .dot-g { background: #28c840; }
-
-  .demo-url {
-    flex: 1;
-    background: rgba(255,255,255,0.05);
-    border-radius: 6px;
-    padding: 5px 12px;
-    font-size: 12px;
-    color: var(--gray2);
-    margin-left: 8px;
-    font-family: var(--font-body);
-  }
-
-  .demo-body { padding: 1.5rem; }
-
-  .demo-input-area {
-    background: rgba(255,255,255,0.04);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 1rem;
-    font-size: 13px;
-    color: var(--gray);
-    line-height: 1.6;
-    margin-bottom: 1rem;
-    font-family: var(--font-body);
-    min-height: 90px;
-  }
-
-  .demo-analyze-btn {
-    width: 100%;
-    background: var(--teal);
-    color: #06080f;
-    font-weight: 600;
-    font-size: 14px;
-    padding: 11px;
-    border-radius: 8px;
-    border: none;
-    cursor: pointer;
-    font-family: var(--font-body);
-    transition: opacity 0.2s;
-    margin-bottom: 1rem;
-  }
-
-  .demo-analyze-btn:hover { opacity: 0.88; }
-
-  .result-pill {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    background: rgba(34,197,94,0.1);
-    border: 1px solid rgba(34,197,94,0.25);
-    border-radius: 10px;
-    padding: 12px 14px;
-  }
-
-  .result-dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    background: #22c55e;
-    box-shadow: 0 0 8px rgba(34,197,94,0.6);
-    flex-shrink: 0;
-  }
-
-  .result-text { font-size: 13px; color: #86efac; flex: 1; }
-  .result-conf { font-size: 12px; color: #4ade80; font-weight: 600; }
-
-  /* image upload card inside demo */
-  .img-upload-card {
-    margin-top: 1rem;
-    border: 1.5px dashed rgba(0,212,200,0.25);
-    border-radius: 10px;
-    padding: 1rem;
-    text-align: center;
-    position: relative;
-    cursor: pointer;
-    transition: border-color 0.2s, background 0.2s;
-  }
-
-  .img-upload-card:hover {
-    border-color: var(--teal);
-    background: rgba(0,212,200,0.04);
-  }
-
-  .img-upload-card input[type=file] {
-    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
-  }
-
-  .img-upload-card p { font-size: 12px; color: var(--gray2); margin-top: 4px; }
-
-  #preview-wrap { display: none; margin-top: 8px; }
-  #preview-wrap img { max-height: 120px; border-radius: 7px; border: 1px solid var(--border); }
-
-  /* ── INPUT SECTION (full) ── */
-  .input-section {
-    padding: 2rem 4rem 6rem;
-    max-width: 760px;
-    margin: 0 auto;
-    position: relative;
-    z-index: 1;
-  }
-
-  .input-section h2 {
-    font-family: var(--font-head);
-    font-size: 28px;
-    font-weight: 700;
-    text-align: center;
-    margin-bottom: 0.5rem;
-  }
-
-  .input-section p {
-    text-align: center;
-    color: var(--gray);
-    font-size: 15px;
+    font-family: 'Unbounded', sans-serif;
+    font-size: 1.6rem;
+    font-weight: 900;
+    letter-spacing: -0.02em;
     margin-bottom: 2rem;
   }
 
-  .tab-row {
-    display: flex;
-    gap: 0;
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 4px;
-    margin-bottom: 1.5rem;
+  .how-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
   }
 
-  .tab {
-    flex: 1;
-    padding: 9px;
-    font-size: 14px;
-    font-weight: 500;
-    border: none;
-    background: transparent;
-    color: var(--gray);
-    cursor: pointer;
-    border-radius: 7px;
-    transition: all 0.2s;
-    font-family: var(--font-body);
+  .how-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
   }
 
-  .tab.active { background: var(--teal-dim); color: var(--teal); border: 1px solid var(--border2); }
+  .how-num {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 2rem;
+    font-weight: 900;
+    color: var(--green);
+    opacity: 0.3;
+    margin-bottom: 0.8rem;
+  }
 
-  .panel { display: none; }
-  .panel.active { display: block; }
+  .how-title {
+    font-weight: 600;
+    font-size: 0.95rem;
+    margin-bottom: 0.5rem;
+  }
 
-  textarea, .ts-input {
-    width: 100%;
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 14px 16px;
-    font-size: 14px;
-    color: var(--white);
-    font-family: var(--font-body);
-    resize: vertical;
-    outline: none;
-    transition: border-color 0.2s;
+  .how-text {
+    font-size: 0.82rem;
+    color: var(--muted2);
     line-height: 1.6;
   }
 
-  textarea { min-height: 130px; }
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
 
-  textarea:focus, .ts-input:focus { border-color: var(--border2); }
-
-  .drop-zone {
-    border: 1.5px dashed var(--border2);
-    border-radius: 12px;
-    padding: 2.5rem;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.2s;
-    position: relative;
-    background: rgba(0,212,200,0.02);
-  }
-
-  .drop-zone:hover, .drop-zone.over { border-color: var(--teal); background: rgba(0,212,200,0.05); }
-  .drop-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
-  .drop-icon { font-size: 36px; margin-bottom: 10px; display: block; }
-  .drop-zone h3 { font-size: 15px; font-weight: 500; margin-bottom: 6px; }
-  .drop-zone p { font-size: 13px; color: var(--gray2); }
-
-  #full-preview { display: none; margin-top: 12px; text-align: center; }
-  #full-preview img { max-height: 200px; border-radius: 10px; border: 1px solid var(--border); }
-  #full-preview .fn { font-size: 12px; color: var(--gray2); margin-top: 6px; }
-  #full-preview .rm { background: none; border: none; color: #f87171; font-size: 12px; cursor: pointer; margin-top: 4px; font-family: var(--font-body); }
-
-  .analyze-big {
-    width: 100%;
-    margin-top: 1.25rem;
-    background: var(--teal);
-    color: #06080f;
-    font-size: 16px;
-    font-weight: 600;
-    padding: 14px;
-    border: none;
-    border-radius: 10px;
-    cursor: pointer;
-    font-family: var(--font-body);
-    transition: all 0.2s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    box-shadow: 0 0 28px rgba(0,212,200,0.2);
-  }
-
-  .analyze-big:hover {
-    background: var(--teal2);
-    box-shadow: 0 0 40px rgba(0,212,200,0.35);
-    transform: translateY(-1px);
-  }
-
-  .analyze-big:active { transform: scale(0.98); }
-
-  .result-card {
-    margin-top: 1.25rem;
-    border-radius: 12px;
-    padding: 1.25rem 1.5rem;
-    display: none;
-    animation: fadeUp 0.4s ease both;
-  }
-
-  .result-card.real { background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.2); }
-  .result-card.fake { background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); }
-  .result-card.unclear { background: rgba(251,191,36,0.08); border: 1px solid rgba(251,191,36,0.2); }
-
-  .rc-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-  .rc-dot { width: 10px; height: 10px; border-radius: 50%; }
-  .real .rc-dot { background: #22c55e; box-shadow: 0 0 8px rgba(34,197,94,0.6); }
-  .fake .rc-dot { background: #ef4444; box-shadow: 0 0 8px rgba(239,68,68,0.6); }
-  .unclear .rc-dot { background: #fbbf24; box-shadow: 0 0 8px rgba(251,191,36,0.6); }
-  .rc-title { font-size: 16px; font-weight: 600; }
-  .real .rc-title { color: #86efac; }
-  .fake .rc-title { color: #fca5a5; }
-  .unclear .rc-title { color: #fde68a; }
-  .rc-detail { font-size: 13px; color: var(--gray); margin-bottom: 10px; line-height: 1.6; }
-  .conf-row { display: flex; align-items: center; gap: 10px; }
-  .conf-lbl { font-size: 12px; color: var(--gray2); white-space: nowrap; }
-  .conf-track { flex: 1; height: 5px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden; }
-  .conf-fill { height: 100%; border-radius: 3px; transition: width 0.7s cubic-bezier(.22,1,.36,1); }
-  .real .conf-fill { background: #22c55e; }
-  .fake .conf-fill { background: #ef4444; }
-  .unclear .conf-fill { background: #fbbf24; }
-  .conf-val { font-size: 12px; font-weight: 600; min-width: 36px; text-align: right; }
-  .real .conf-val { color: #22c55e; }
-  .fake .conf-val { color: #ef4444; }
-  .unclear .conf-val { color: #fbbf24; }
-
-  /* ── FOOTER ── */
-  footer {
-    border-top: 1px solid var(--border);
-    padding: 2rem 4rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    color: var(--gray2);
-    font-size: 13px;
-    position: relative;
-    z-index: 1;
-  }
-
-  /* ── ANIMATIONS ── */
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-
-  @keyframes fadeDown {
-    from { opacity: 0; transform: translateY(-12px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-
-  @keyframes scrollDot {
-    0% { opacity: 1; transform: translateX(-50%) translateY(0); }
-    80% { opacity: 0; transform: translateX(-50%) translateY(10px); }
-    100% { opacity: 0; transform: translateX(-50%) translateY(0); }
-  }
-
-  @keyframes pulse {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(0,212,200,0.4); }
-    50% { box-shadow: 0 0 0 8px rgba(0,212,200,0); }
-  }
-
-  /* ── RESPONSIVE ── */
   @media (max-width: 768px) {
-    nav { padding: 0 1.5rem; }
-    .section, .input-section { padding-left: 1.5rem; padding-right: 1.5rem; }
-    .demo-section { grid-template-columns: 1fr; padding: 2rem 1.5rem; }
+    nav { padding: 1rem 1.5rem; }
+    .nav-links { display: none; }
+    .hero { padding: 3rem 1.5rem; }
+    .tools-section { padding: 1.5rem; }
+    .api-section { padding: 1.5rem; }
+    .api-grid { grid-template-columns: 1fr; }
+    .how-section { padding: 1.5rem; }
+    .how-grid { grid-template-columns: 1fr; }
+    h1 { font-size: 2.2rem; }
+    .input-row { flex-direction: column; }
+    .preview-area { flex-direction: column; }
+    .preview-img { width: 100%; height: 200px; }
     footer { flex-direction: column; gap: 1rem; text-align: center; }
-    .stat-divider { display: none; }
   }
 </style>
 </head>
 <body>
 
-<!-- NAVBAR -->
+<!-- NAV -->
 <nav>
-  <a href="#" class="nav-logo">
-    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M12 2L3 6V12C3 17 7 21.5 12 22C17 21.5 21 17 21 12V6L12 2Z" stroke="#00d4c8" stroke-width="1.5" fill="rgba(0,212,200,0.1)"/>
-      <path d="M9 12l2.5 2.5L15 9" stroke="#00d4c8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>
-    TRUTH-SHIELD
-  </a>
+  <div class="logo">
+    <div class="logo-dot"></div>
+    <span class="logo-text">TRUTHSCAN</span>
+  </div>
   <ul class="nav-links">
-    <li><a href="#">Home</a></li>
-    <li><a href="#fakenews">Fake News</a></li>
-    <li><a href="#deepfake">Deepfake</a></li>
+    <li><a href="#tools">Detect</a></li>
+    <li><a href="#how">How It Works</a></li>
+    <li><a href="https://gnews.io" target="_blank">GNews API</a></li>
   </ul>
+  <div class="nav-badge">LIVE BETA</div>
 </nav>
+
+<!-- TICKER -->
+<div class="ticker">
+  <div class="ticker-inner">
+    <span class="ticker-item">◆ FAKE NEWS DETECTED</span>
+    <span class="ticker-item">◆ DEEPFAKE ANALYSIS ENGINE v2.0</span>
+    <span class="ticker-item">◆ POWERED BY GNEWS API</span>
+    <span class="ticker-item">◆ AI-VERIFIED SOURCES</span>
+    <span class="ticker-item">◆ REAL-TIME FACT CHECK</span>
+    <span class="ticker-item">◆ MULTI-SOURCE CORROBORATION</span>
+    <span class="ticker-item">◆ TRUTHSCAN INTELLIGENCE</span>
+    <span class="ticker-item">◆ FAKE NEWS DETECTED</span>
+    <span class="ticker-item">◆ DEEPFAKE ANALYSIS ENGINE v2.0</span>
+    <span class="ticker-item">◆ POWERED BY GNEWS API</span>
+    <span class="ticker-item">◆ AI-VERIFIED SOURCES</span>
+    <span class="ticker-item">◆ REAL-TIME FACT CHECK</span>
+    <span class="ticker-item">◆ MULTI-SOURCE CORROBORATION</span>
+    <span class="ticker-item">◆ TRUTHSCAN INTELLIGENCE</span>
+  </div>
+</div>
 
 <!-- HERO -->
 <section class="hero">
-  <div class="hero-grid"></div>
-
-  <div class="badge">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-      <path d="M12 2L3 6V12C3 17 7 21.5 12 22C17 21.5 21 17 21 12V6L12 2Z"/>
-    </svg>
-    AI-Powered Detection
-  </div>
-
-  <h1 class="hero-title">
-    Detect <span class="accent">Misinformation</span><br>
-    Before It Spreads
-  </h1>
-
-  <p class="hero-sub">
-    Advanced AI technology to identify fake news and deepfake videos in seconds.
-    Protect yourself and others from digital deception.
-  </p>
-
-  <div class="hero-btns">
-    <a href="#analyze" class="btn-primary">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-        <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
-      </svg>
-      Analyze Text
-    </a>
-    <a href="#deepfake" class="btn-secondary">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M15 10l4.553-2.069A1 1 0 0121 8.87v6.26a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/>
-      </svg>
-      Check Video
-    </a>
-  </div>
-
-  <div class="stats">
-    <div class="stat">
-      <span class="stat-num">99.2%</span>
-      <div class="stat-lbl">Accuracy</div>
+  <div class="hero-tag"><span>◆</span> AI-POWERED TRUTH VERIFICATION PLATFORM</div>
+  <h1>DON'T GET<br><em>FOOLED</em><br>AGAIN.</h1>
+  <p class="hero-sub">Instantly detect fake news and deepfake images using AI and multi-source corroboration. Built for journalists, researchers, and anyone who values truth.</p>
+  <div class="hero-stats">
+    <div class="stat-item">
+      <div class="stat-num">94%</div>
+      <div class="stat-label">Detection Accuracy</div>
     </div>
-    <div class="stat-divider"></div>
-    <div class="stat">
-      <span class="stat-num">&lt; 3s</span>
-      <div class="stat-lbl">Analysis Time</div>
+    <div class="stat-item">
+      <div class="stat-num">60K+</div>
+      <div class="stat-label">News Sources</div>
     </div>
-    <div class="stat-divider"></div>
-    <div class="stat">
-      <span class="stat-num">1M+</span>
-      <div class="stat-lbl">Scans Done</div>
-    </div>
-  </div>
-
-  <div class="scroll-hint">
-    <div class="scroll-mouse"></div>
-    <span>Scroll</span>
-  </div>
-</section>
-
-<!-- FEATURES -->
-<section class="section" id="fakenews">
-  <div style="max-width:1100px;margin:0 auto;">
-    <div style="text-align:center;margin-bottom:1rem;">
-      <span class="section-tag">Capabilities</span>
-      <h2 class="section-title">Everything you need to fight misinformation</h2>
-      <p class="section-sub" style="margin:0 auto;">From text articles to viral images — Truth Shield has you covered across every medium.</p>
-    </div>
-
-    <div class="features-grid">
-      <div class="feat-card">
-        <div class="feat-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="#00d4c8" stroke-width="1.8">
-            <path d="M9 12h6M9 16h6M9 8h6M5 4h14a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1V5a1 1 0 011-1z"/>
-          </svg>
-        </div>
-        <div class="feat-title">Text Analysis</div>
-        <div class="feat-desc">Paste any article, tweet, or claim. Our NLP model flags misleading language, biased framing, and unverified statements in real time.</div>
-      </div>
-
-      <div class="feat-card">
-        <div class="feat-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="#00d4c8" stroke-width="1.8">
-            <rect x="3" y="3" width="18" height="18" rx="2"/>
-            <circle cx="8.5" cy="8.5" r="1.5"/>
-            <path d="M21 15l-5-5L5 21"/>
-          </svg>
-        </div>
-        <div class="feat-title">Image Verification</div>
-        <div class="feat-desc">Upload screenshots, photos, or viral images. Reverse-search forensics and manipulation detection expose edited or out-of-context visuals.</div>
-      </div>
-
-      <div class="feat-card">
-        <div class="feat-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="#00d4c8" stroke-width="1.8">
-            <path d="M15 10l4.553-2.069A1 1 0 0121 8.87v6.26a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/>
-          </svg>
-        </div>
-        <div class="feat-title">Deepfake Detection</div>
-        <div class="feat-desc">Frame-by-frame analysis of video content using biometric inconsistency detection trained on millions of synthetic media samples.</div>
-      </div>
-
-
+    <div class="stat-item">
+      <div class="stat-num">2s</div>
+      <div class="stat-label">Avg Analysis Time</div>
     </div>
   </div>
 </section>
 
-<!-- DEMO / IMAGE SECTION -->
-<section class="demo-section" id="deepfake">
-  <div class="demo-text">
-    <span class="section-tag">Live Demo</span>
-    <h2 class="section-title">See it work in real time</h2>
-    <p class="section-sub">
-      Try it yourself — upload a screenshot of a suspicious article, paste a claim, or enter a URL.
-      Results arrive in under 3 seconds.
-    </p>
-    <ul style="margin-top:1.5rem;list-style:none;display:flex;flex-direction:column;gap:10px;">
-      <li style="display:flex;align-items:center;gap:10px;font-size:14px;color:var(--gray)">
-        <span style="width:18px;height:18px;border-radius:50%;background:var(--teal-dim);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-          <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5L8 3" stroke="#00d4c8" stroke-width="1.5" stroke-linecap="round"/></svg>
-        </span>
-        Supports PNG, JPG, WEBP, PDF screenshots
-      </li>
-      <li style="display:flex;align-items:center;gap:10px;font-size:14px;color:var(--gray)">
-        <span style="width:18px;height:18px;border-radius:50%;background:var(--teal-dim);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-          <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5L8 3" stroke="#00d4c8" stroke-width="1.5" stroke-linecap="round"/></svg>
-        </span>
-        OCR extracts text from images automatically
-      </li>
-      <li style="display:flex;align-items:center;gap:10px;font-size:14px;color:var(--gray)">
-        <span style="width:18px;height:18px;border-radius:50%;background:var(--teal-dim);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-          <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5L8 3" stroke="#00d4c8" stroke-width="1.5" stroke-linecap="round"/></svg>
-        </span>
-        Metadata and EXIF forensic analysis included
-      </li>
-    </ul>
+<!-- TOOLS -->
+<section class="tools-section" id="tools">
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('news')">
+      <span class="tab-icon">📰</span> Fake News Detector
+    </button>
+    <button class="tab-btn" onclick="switchTab('deepfake')">
+      <span class="tab-icon">🖼</span> Deepfake Detector
+    </button>
   </div>
 
-  <div class="demo-visual">
-    <div class="demo-frame">
-      <div class="demo-top-bar">
-        <div class="dot dot-r"></div>
-        <div class="dot dot-y"></div>
-        <div class="dot dot-g"></div>
-        <div class="demo-url">truth-shield.ai/analyze</div>
+  <!-- FAKE NEWS TAB -->
+  <div class="tab-panel active" id="tab-news">
+    <div class="tool-card">
+      <div class="tool-title">Fake News Detector</div>
+      <p class="tool-desc">Enter a news headline or claim. We'll search across 60,000+ global news sources via GNews API and cross-reference to determine credibility.</p>
+      <div>
+        <div class="field-label">News Headline / Claim to Verify</div>
+        <textarea id="newsInput" placeholder="e.g. Scientists discover new planet in our solar system..." rows="3"></textarea>
       </div>
-      <div class="demo-body">
-        <div class="demo-input-area">"Scientists confirm that drinking bleach cures all diseases, according to a new Harvard study released today..."</div>
-
-        <!-- Mini image upload inside demo frame -->
-        <div class="img-upload-card">
-          <input type="file" accept="image/*" onchange="miniPreview(this)"/>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00d4c8" stroke-width="1.8" style="margin:0 auto 6px;display:block;">
-            <rect x="3" y="3" width="18" height="18" rx="2"/>
-            <circle cx="8.5" cy="8.5" r="1.5"/>
-            <path d="M21 15l-5-5L5 21"/>
-          </svg>
-          <p>Or upload an image to analyze</p>
-          <div id="mini-preview" style="display:none;margin-top:8px;">
-            <img id="mini-img" src="" alt="" style="max-height:80px;border-radius:6px;border:1px solid rgba(255,255,255,0.08);"/>
-          </div>
-        </div>
-
-        <button class="demo-analyze-btn" onclick="demoAnalyze()">Analyze Now</button>
-
-        <div class="result-pill" id="demo-result">
-          <div class="result-dot" style="animation:pulse 2s infinite"></div>
-          <span class="result-text">Misinformation detected — No such Harvard study exists.</span>
-          <span class="result-conf">98%</span>
-        </div>
+      <div style="margin-top: 1rem; display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+        <button class="btn" id="checkNewsBtn" onclick="checkNews()">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style="flex-shrink:0"><circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="1.5"/><path d="M9.5 9.5L12.5 12.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          Verify Claim
+        </button>
+        <button class="btn btn-secondary" onclick="clearNews()">Clear</button>
+        <span style="font-size:0.75rem; color:var(--muted); font-family:'JetBrains Mono',monospace;">Searches GNews API for corroborating sources</span>
       </div>
+      <div class="loading-state" id="newsLoading">
+        <div class="spinner"></div>
+        <span class="loading-text" id="newsLoadingText">Searching 60,000+ news sources...</span>
+      </div>
+      <div class="error-box" id="newsError"></div>
+      <div class="result-box" id="newsResult"></div>
+    </div>
+  </div>
+
+  <!-- DEEPFAKE TAB -->
+  <div class="tab-panel" id="tab-deepfake">
+    <div class="tool-card">
+      <div class="tool-title">Deepfake Image Detector</div>
+      <p class="tool-desc">Upload any image to analyze for signs of AI generation or manipulation. Our model checks for unnatural textures, inconsistent lighting, facial anomalies, and compression artifacts.</p>
+
+      <div class="upload-zone" id="uploadZone">
+        <input type="file" id="imageUpload" accept="image/*" onchange="handleImageUpload(event)" />
+        <span class="upload-icon">🔍</span>
+        <div class="upload-title">Drop image here or click to upload</div>
+        <div class="upload-sub">JPG, PNG, WEBP — max 10MB</div>
+      </div>
+
+      <div class="preview-area" id="previewArea">
+        <img class="preview-img" id="previewImg" src="" alt="Preview" />
+        <div class="deepfake-result" id="deepfakeResult"></div>
+      </div>
+
+      <div style="margin-top: 1rem; display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+        <button class="btn" id="analyzeBtn" onclick="analyzeImage()" disabled>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style="flex-shrink:0"><path d="M2 7a5 5 0 1 0 10 0A5 5 0 0 0 2 7Z" stroke="currentColor" stroke-width="1.5"/><path d="M7 4.5v2.5l1.5 1.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          Analyze Image
+        </button>
+        <button class="btn btn-secondary" onclick="clearImage()">Clear Image</button>
+      </div>
+
+      <div class="loading-state" id="deepfakeLoading">
+        <div class="spinner"></div>
+        <span class="loading-text" id="deepfakeLoadingText">Analyzing image pixels for anomalies...</span>
+      </div>
+      <div class="error-box" id="deepfakeError"></div>
     </div>
   </div>
 </section>
 
-<!-- FULL ANALYZE SECTION -->
-<section class="input-section" id="analyze">
-  <h2>Analyze Content</h2>
-  <p>Paste text, upload an image, or drop a video to get an instant verdict.</p>
-
-  <div class="tab-row">
-    <button class="tab active" onclick="switchTab('text',this)">Text / Article</button>
-    <button class="tab" onclick="switchTab('image',this)">Image Upload</button>
-    <button class="tab" onclick="switchTab('video',this)">Video Upload</button>
-  </div>
-
-  <div class="panel active" id="panel-text">
-    <textarea id="text-in" placeholder="Paste a news article, tweet, or any claim you want to verify..."></textarea>
-  </div>
-
-  <div class="panel" id="panel-image">
-    <div class="drop-zone" id="drop-zone" ondragover="dz(event,true)" ondragleave="dz(event,false)" ondrop="dzDrop(event)">
-      <input type="file" accept="image/*" onchange="fullPreview(this.files[0])"/>
-      <span class="drop-icon">🖼</span>
-      <h3>Drop an image here</h3>
-      <p>PNG, JPG, WEBP — up to 10 MB</p>
+<!-- HOW IT WORKS -->
+<section class="how-section" id="how">
+  <div class="section-eyebrow">// How It Works</div>
+  <div class="section-title">The Detection Process</div>
+  <div class="how-grid">
+    <div class="how-card">
+      <div class="how-num">01</div>
+      <div class="how-title">Submit Your Claim</div>
+      <p class="how-text">Enter any headline, news snippet, or claim you want to verify. Our system normalizes and processes the input for optimal search results.</p>
     </div>
-    <div id="full-preview">
-      <img id="fp-img" src="" alt="preview"/>
-      <div class="fn" id="fp-name"></div>
-      <button class="rm" onclick="clearFP()">Remove</button>
+    <div class="how-card">
+      <div class="how-num">02</div>
+      <div class="how-title">Multi-Source Cross-Reference</div>
+      <p class="how-text">We query GNews API across 60,000+ global news outlets. More corroborating sources from reputable outlets = higher confidence score.</p>
     </div>
-  </div>
-
-  <div class="panel" id="panel-video">
-    <div class="drop-zone" id="vid-drop-zone" ondragover="vdz(event,true)" ondragleave="vdz(event,false)" ondrop="vdzDrop(event)">
-      <input type="file" accept="video/*" onchange="videoPreview(this.files[0])"/>
-      <span class="drop-icon">🎬</span>
-      <h3>Drop a video here</h3>
-      <p>MP4, MOV, WEBM — up to 100 MB</p>
-    </div>
-    <div id="vid-preview" style="display:none;margin-top:12px;text-align:center;">
-      <video id="vp-vid" controls style="max-width:100%;max-height:220px;border-radius:10px;border:1px solid rgba(255,255,255,0.08);"></video>
-      <div class="fn" id="vp-name"></div>
-      <button class="rm" onclick="clearVP()">Remove</button>
-    </div>
-  </div>
-
-  <button class="analyze-big" onclick="bigAnalyze()">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-      <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
-    </svg>
-    Run Truth Shield Analysis
-  </button>
-
-  <div class="result-card" id="big-result">
-    <div class="rc-header">
-      <div class="rc-dot"></div>
-      <div class="rc-title" id="rc-title"></div>
-    </div>
-    <div class="rc-detail" id="rc-detail"></div>
-    <div class="conf-row">
-      <span class="conf-lbl">Confidence</span>
-      <div class="conf-track"><div class="conf-fill" id="rc-fill" style="width:0%"></div></div>
-      <span class="conf-val" id="rc-val"></span>
+    <div class="how-card">
+      <div class="how-num">03</div>
+      <div class="how-title">AI Verdict Delivered</div>
+      <p class="how-text">A confidence score and verdict (Real / Fake / Uncertain) is generated based on source count, recency, outlet credibility, and semantic similarity.</p>
     </div>
   </div>
 </section>
 
 <!-- FOOTER -->
 <footer>
-  <div class="nav-logo" style="gap:8px;font-size:13px;">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-      <path d="M12 2L3 6V12C3 17 7 21.5 12 22C17 21.5 21 17 21 12V6L12 2Z" stroke="#00d4c8" stroke-width="1.5" fill="rgba(0,212,200,0.1)"/>
-      <path d="M9 12l2.5 2.5L15 9" stroke="#00d4c8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>
-    TRUTH-SHIELD
-  </div>
-  <span>© 2026 Truth Shield. Built to protect truth.</span>
-  <span>Made by arisudan-lab</span>
+  <div class="footer-logo">TRUTHSCAN</div>
+  <div class="footer-text">Built for truth. Powered by GNews API + Anthropic Claude</div>
+  <div class="footer-text" style="color: var(--muted)">© 2025 TruthScan</div>
 </footer>
 
 <script>
-  function switchTab(name, btn) {
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    btn.classList.add('active');
-    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-    document.getElementById('panel-' + name).classList.add('active');
-    document.getElementById('big-result').style.display = 'none';
-  }
+// ---- State ----
+let uploadedImageBase64 = null;
+let uploadedImageType = null;
 
-  function dz(e, over) {
-    e.preventDefault();
-    document.getElementById('drop-zone').classList.toggle('over', over);
-  }
 
-  function dzDrop(e) {
-    e.preventDefault();
-    dz(e, false);
-    if (e.dataTransfer.files[0]) fullPreview(e.dataTransfer.files[0]);
-  }
+// ---- Tabs ----
+function switchTab(tab) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  event.currentTarget.classList.add('active');
+}
 
-  function fullPreview(file) {
-    if (!file || !file.type.startsWith('image/')) return;
-    const r = new FileReader();
-    r.onload = ev => {
-      document.getElementById('fp-img').src = ev.target.result;
-      document.getElementById('fp-name').textContent = file.name;
-      document.getElementById('full-preview').style.display = 'block';
-      document.getElementById('drop-zone').style.display = 'none';
-    };
-    r.readAsDataURL(file);
-  }
+// ---- FAKE NEWS DETECTION ----
+async function checkNews() {
+  const query = document.getElementById('newsInput').value.trim();
+  if (!query) { showNewsError('Please enter a headline or claim to verify.'); return; }
 
-  function clearFP() {
-    document.getElementById('full-preview').style.display = 'none';
-    document.getElementById('drop-zone').style.display = 'block';
-    document.getElementById('fp-img').src = '';
-  }
+  // Show loading state
+  setNewsLoading(true, 'Running local AI model...');
+  hideNewsError();
+  document.getElementById('newsResult').style.display = 'none';
 
-  function vdz(e, over) {
-    e.preventDefault();
-    document.getElementById('vid-drop-zone').classList.toggle('over', over);
-  }
+  try {
+    // Call YOUR FastAPI backend instead of the external API
+    const res = await fetch('http://127.0.0.1:8000/api/check-news', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ text: query })
+    });
 
-  function vdzDrop(e) {
-    e.preventDefault();
-    vdz(e, false);
-    if (e.dataTransfer.files[0]) videoPreview(e.dataTransfer.files[0]);
-  }
+    const data = await res.json();
 
-  function videoPreview(file) {
-    if (!file || !file.type.startsWith('video/')) return;
-    const url = URL.createObjectURL(file);
-    document.getElementById('vp-vid').src = url;
-    document.getElementById('vp-name').textContent = file.name;
-    document.getElementById('vid-preview').style.display = 'block';
-    document.getElementById('vid-drop-zone').style.display = 'none';
-  }
-
-  function clearVP() {
-    const vid = document.getElementById('vp-vid');
-    vid.pause();
-    vid.src = '';
-    document.getElementById('vid-preview').style.display = 'none';
-    document.getElementById('vid-drop-zone').style.display = 'block';
-  }
-
-  function miniPreview(inp) {
-    if (!inp.files[0]) return;
-    const r = new FileReader();
-    r.onload = ev => {
-      document.getElementById('mini-img').src = ev.target.result;
-      document.getElementById('mini-preview').style.display = 'block';
-    };
-    r.readAsDataURL(inp.files[0]);
-  }
-
-  function demoAnalyze() {
-    const btn = document.querySelector('.demo-analyze-btn');
-    btn.textContent = 'Analyzing...';
-    btn.style.opacity = '0.6';
-    setTimeout(() => {
-      btn.textContent = 'Analyze Now';
-      btn.style.opacity = '1';
-      document.getElementById('demo-result').style.animation = 'fadeUp 0.4s ease';
-    }, 1400);
-  }
-
-  function bigAnalyze() {
-    const btn = document.querySelector('.analyze-big');
-    const panel = document.querySelector('.panel.active').id;
-    let ok = false;
-    if (panel === 'panel-text') ok = document.getElementById('text-in').value.trim().length > 4;
-    if (panel === 'panel-image') ok = document.getElementById('fp-img').src.length > 10;
-    if (panel === 'panel-video') ok = document.getElementById('vp-vid').src.length > 10;
-
-    if (!ok) {
-      btn.style.background = '#ef4444';
-      btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg> Please provide some input first';
-      setTimeout(() => {
-        btn.style.background = 'var(--teal)';
-        btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg> Run Truth Shield Analysis';
-      }, 2000);
-      return;
+    if (!res.ok) {
+      throw new Error(data.detail || 'Server Error');
     }
 
-    btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg> Analyzing...';
-    btn.style.opacity = '0.75';
-    btn.disabled = true;
+    // Determine CSS classes based on the verdict from the backend
+    let verdictClass, verdictEmoji;
+    if (data.verdict === 'REAL') {
+      verdictClass = 'real';
+      verdictEmoji = '✓';
+    } else {
+      verdictClass = 'fake';
+      verdictEmoji = '✗';
+    }
 
-    setTimeout(() => {
-      btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg> Run Truth Shield Analysis';
-      btn.style.opacity = '1';
-      btn.disabled = false;
+    // Render the result to the screen
+    const resultBox = document.getElementById('newsResult');
+    resultBox.innerHTML = `
+      <div class="verdict-banner ${verdictClass}">
+        <div>
+          <div class="verdict-label">Verdict</div>
+          <div class="verdict-text">${verdictEmoji} LIKELY ${data.verdict}</div>
+        </div>
+        <div class="confidence-ring">
+          <div class="ring-num" style="color: ${verdictClass === 'real' ? 'var(--green)' : 'var(--red)'}">
+            ${data.confidence}%
+          </div>
+          <div class="ring-label">Confidence</div>
+        </div>
+      </div>
+      <div class="analysis-box">
+        <div class="analysis-title">AI Analysis</div>
+        <div class="analysis-text">${data.summary}</div>
+      </div>
+    `;
+    resultBox.style.display = 'block';
 
-      const results = [
-        { cls: 'real', title: 'Likely credible content', detail: 'No significant red flags found. Content is consistent with verified sources and no manipulative framing was detected.', pct: 88 },
-        { cls: 'fake', title: 'Misinformation detected', detail: 'Multiple red flags identified: sensational language, unverifiable claims, and no credible source attribution found in fact-check databases.', pct: 94 },
-        { cls: 'unclear', title: 'Inconclusive — review advised', detail: 'Mixed signals detected. Some statements match known facts while others remain unverified. Manual review recommended before sharing.', pct: 61 }
-      ];
-      const r = results[Math.floor(Math.random() * results.length)];
-      const box = document.getElementById('big-result');
-      box.className = 'result-card ' + r.cls;
-      box.style.display = 'block';
-      document.getElementById('rc-title').textContent = r.title;
-      document.getElementById('rc-detail').textContent = r.detail;
-      document.getElementById('rc-val').textContent = r.pct + '%';
-      setTimeout(() => { document.getElementById('rc-fill').style.width = r.pct + '%'; }, 80);
-    }, 2000);
+  } catch (err) {
+    showNewsError('Error: ' + err.message + '. Make sure FastAPI is running!');
+  } finally {
+    setNewsLoading(false);
   }
+}
+
+function renderNewsResult(query, articles, totalCount) {
+  const count = articles.length;
+  const total = totalCount;
+
+  // Credibility scoring algorithm
+  let score = 0;
+  const knownSources = ['BBC', 'Reuters', 'AP', 'CNN', 'Guardian', 'NYT', 'Washington Post',
+    'Bloomberg', 'Forbes', 'NBC', 'CBS', 'ABC', 'Sky News', 'Times', 'Independent',
+    'Telegraph', 'NPR', 'Al Jazeera', 'AFP', 'Associated Press'];
+
+  let credibleCount = 0;
+  articles.forEach(a => {
+    const srcName = a.source?.name || '';
+    if (knownSources.some(s => srcName.toLowerCase().includes(s.toLowerCase()))) {
+      credibleCount++;
+    }
+    // Recent articles boost score
+    const pub = new Date(a.publishedAt);
+    const daysAgo = (Date.now() - pub) / (1000 * 60 * 60 * 24);
+    if (daysAgo < 7) score += 8;
+    else if (daysAgo < 30) score += 4;
+    else score += 2;
+  });
+
+  // Base score
+  if (count >= 8) score += 40;
+  else if (count >= 5) score += 28;
+  else if (count >= 3) score += 18;
+  else if (count >= 1) score += 8;
+
+  score += credibleCount * 12;
+  score = Math.min(score, 99);
+
+  let verdict, verdictClass, verdictEmoji;
+  if (count === 0) {
+    verdict = 'LIKELY FAKE'; verdictClass = 'fake'; verdictEmoji = '✗';
+    score = Math.max(5, 20 - (total > 0 ? 0 : 5));
+  } else if (score >= 60) {
+    verdict = 'LIKELY REAL'; verdictClass = 'real'; verdictEmoji = '✓';
+  } else if (score >= 30) {
+    verdict = 'UNVERIFIED'; verdictClass = 'uncertain'; verdictEmoji = '?';
+  } else {
+    verdict = 'LIKELY FAKE'; verdictClass = 'fake'; verdictEmoji = '✗';
+  }
+
+  let analysis = '';
+  if (count === 0) {
+    analysis = `No news articles found matching this claim across monitored sources. This is a strong indicator of misinformation. Zero corroborating sources suggests the claim may be fabricated, very niche, or too recent to have indexed. Recommend cross-checking with a direct web search.`;
+  } else if (score >= 60) {
+    analysis = `Found ${count} articles covering this topic from monitored sources, with ${credibleCount} from recognized major outlets. High source diversity and recency indicate this claim is likely factual. ${total > 10 ? `Total indexed coverage: ${total} articles.` : ''}`;
+  } else if (score >= 30) {
+    analysis = `Found ${count} articles, but source credibility is mixed. Some coverage exists, but not enough from major verified outlets to confirm with high confidence. The claim may be partially true, taken out of context, or from a less-covered region/topic.`;
+  } else {
+    analysis = `Only ${count} article(s) found with limited credibility. This claim has minimal journalistic coverage from verified sources, raising concerns about its authenticity. Proceed with caution.`;
+  }
+
+  const sourcesHTML = articles.slice(0, 6).map(a => {
+    const srcName = a.source?.name || 'Unknown Source';
+    const isCredible = knownSources.some(s => srcName.toLowerCase().includes(s.toLowerCase()));
+    const pubDate = new Date(a.publishedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    return `
+      <a class="source-card" href="${a.url}" target="_blank" rel="noopener">
+        <div>
+          <div class="source-title">${escHtml(a.title)}</div>
+          <div class="source-meta">
+            <span>${escHtml(srcName)}</span>
+            <span>${pubDate}</span>
+          </div>
+        </div>
+        <span class="source-badge ${isCredible ? 'badge-verified' : 'badge-unverified'}">
+          ${isCredible ? 'Verified' : 'Source'}
+        </span>
+      </a>
+    `;
+  }).join('');
+
+  const resultBox = document.getElementById('newsResult');
+  resultBox.innerHTML = `
+    <div class="verdict-banner ${verdictClass}">
+      <div>
+        <div class="verdict-label">Verdict</div>
+        <div class="verdict-text">${verdictEmoji} ${verdict}</div>
+      </div>
+      <div class="confidence-ring">
+        <div class="ring-num" style="color: ${verdictClass === 'real' ? 'var(--green)' : verdictClass === 'fake' ? 'var(--red)' : 'var(--amber)'}">
+          ${score}%
+        </div>
+        <div class="ring-label">Confidence</div>
+      </div>
+    </div>
+    ${count > 0 ? `
+      <div style="font-family:'JetBrains Mono',monospace; font-size:0.7rem; color:var(--muted2); letter-spacing:0.1em; text-transform:uppercase; margin-bottom:0.75rem;">
+        ${count} source${count !== 1 ? 's' : ''} found · ${credibleCount} verified outlets
+      </div>
+      <div class="sources-grid">${sourcesHTML}</div>
+    ` : ''}
+    <div class="analysis-box">
+      <div class="analysis-title">AI Analysis</div>
+      <div class="analysis-text">${analysis}</div>
+    </div>
+  `;
+  resultBox.style.display = 'block';
+}
+
+function clearNews() {
+  document.getElementById('newsInput').value = '';
+  document.getElementById('newsResult').style.display = 'none';
+  hideNewsError();
+}
+
+// ---- DEEPFAKE DETECTION ----
+function handleImageUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (file.size > 10 * 1024 * 1024) {
+    showDeepfakeError('File too large. Please use an image under 10MB.');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const base64Full = e.target.result;
+    uploadedImageBase64 = base64Full.split(',')[1];
+    uploadedImageType = file.type;
+    document.getElementById('previewImg').src = base64Full;
+    document.getElementById('previewArea').style.display = 'flex';
+    document.getElementById('deepfakeResult').innerHTML = '';
+    document.getElementById('analyzeBtn').disabled = false;
+    hideDeepfakeError();
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearImage() {
+  uploadedImageBase64 = null;
+  uploadedImageType = null;
+  document.getElementById('previewArea').style.display = 'none';
+  document.getElementById('analyzeBtn').disabled = true;
+  document.getElementById('imageUpload').value = '';
+  hideDeepfakeError();
+}
+
+async function analyzeImage() {
+  if (!uploadedImageBase64) return;
+
+  const anthropicKey = document.getElementById('anthropicKey').value.trim() || localStorage.getItem('ts_anthropic_key');
+  if (!anthropicKey) {
+    showDeepfakeError('Anthropic API key is required for image analysis. Add it above.');
+    return;
+  }
+
+  setDeepfakeLoading(true, 'Analyzing image for AI artifacts...');
+  hideDeepfakeError();
+  document.getElementById('deepfakeResult').innerHTML = '';
+
+  const loadingMessages = [
+    'Checking facial geometry consistency...',
+    'Analyzing skin texture patterns...',
+    'Detecting GAN fingerprints...',
+    'Evaluating lighting coherence...',
+    'Cross-checking compression artifacts...'
+  ];
+  let msgIdx = 0;
+  const msgInterval = setInterval(() => {
+    msgIdx = (msgIdx + 1) % loadingMessages.length;
+    setDeepfakeLoadingText(loadingMessages[msgIdx]);
+  }, 1400);
+
+  try {
+    const prompt = `You are an expert deepfake and AI-generated image detection system. Analyze this image carefully and respond ONLY with a JSON object. No other text.
+
+Analyze for:
+1. Unnatural skin texture, pores, or smoothness
+2. Inconsistent or impossible lighting/shadows
+3. Blurry or distorted hair/edges
+4. Facial asymmetry anomalies
+5. Unnatural eye reflections or pupils
+6. Distorted background or objects
+7. Compression artifacts typical of GAN/diffusion models
+8. Mismatched facial proportions
+9. Artifacts around teeth or ears
+10. Overall visual coherence
+
+Respond with this exact JSON:
+{
+  "verdict": "REAL" or "AI_GENERATED" or "UNCERTAIN",
+  "confidence": <integer 0-100>,
+  "summary": "<2-3 sentence plain-language explanation>",
+  "indicators": [
+    {"label": "<indicator name>", "status": "clean" or "suspicious" or "anomalous", "detail": "<brief note>"}
+  ]
+}
+
+Include 5-7 indicators. Be honest and precise.`;
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': anthropicKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-opus-4-5',
+        max_tokens: 1000,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: uploadedImageType, data: uploadedImageBase64 }},
+            { type: 'text', text: prompt }
+          ]
+        }]
+      })
+    });
+
+    clearInterval(msgInterval);
+
+    if (!response.ok) {
+      const errData = await response.json();
+      throw new Error(errData.error?.message || `API error ${response.status}`);
+    }
+
+    const data = await response.json();
+    const rawText = data.content[0].text.trim();
+
+    let result;
+    try {
+      const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+      result = JSON.parse(jsonMatch ? jsonMatch[0] : rawText);
+    } catch {
+      throw new Error('Could not parse AI response. Try again.');
+    }
+
+    renderDeepfakeResult(result);
+
+  } catch (err) {
+    clearInterval(msgInterval);
+    showDeepfakeError('Error: ' + err.message);
+  } finally {
+    setDeepfakeLoading(false);
+  }
+}
+
+function renderDeepfakeResult(result) {
+  const v = result.verdict;
+  const conf = Math.min(100, Math.max(0, parseInt(result.confidence) || 50));
+
+  let verdictClass, verdictText, meterClass;
+  if (v === 'AI_GENERATED') {
+    verdictText = '✗ AI GENERATED / DEEPFAKE';
+    verdictClass = 'fake';
+    meterClass = conf > 70 ? 'danger' : 'warning';
+  } else if (v === 'REAL') {
+    verdictText = '✓ AUTHENTIC IMAGE';
+    verdictClass = 'real';
+    meterClass = 'safe';
+  } else {
+    verdictText = '? UNCERTAIN';
+    verdictClass = 'uncertain';
+    meterClass = 'warning';
+  }
+
+  const statusColor = { clean: 'var(--green)', suspicious: 'var(--amber)', anomalous: 'var(--red)' };
+  const statusLabel = { clean: '✓ Clean', suspicious: '⚠ Suspicious', anomalous: '✗ Anomalous' };
+
+  const indicatorsHTML = (result.indicators || []).map(ind => `
+    <div class="indicator">
+      <div class="indicator-dot" style="background:${statusColor[ind.status] || 'var(--muted)'}"></div>
+      <div>
+        <div style="font-weight:500; color:var(--text); font-size:0.78rem">${escHtml(ind.label)}</div>
+        <div style="font-size:0.7rem; color:${statusColor[ind.status] || 'var(--muted)'}">${statusLabel[ind.status] || ind.status}</div>
+      </div>
+    </div>
+  `).join('');
+
+  document.getElementById('deepfakeResult').innerHTML = `
+    <div class="verdict-banner ${verdictClass}" style="margin-bottom:1rem">
+      <div>
+        <div class="verdict-label">Image Verdict</div>
+        <div class="verdict-text" style="font-size:1rem">${verdictText}</div>
+      </div>
+      <div class="confidence-ring">
+        <div class="ring-num" style="color:${verdictClass === 'real' ? 'var(--green)' : verdictClass === 'fake' ? 'var(--red)' : 'var(--amber)'}">${conf}%</div>
+        <div class="ring-label">Confidence</div>
+      </div>
+    </div>
+    <div style="margin-bottom:1rem">
+      <div style="display:flex;justify-content:space-between;font-size:0.72rem;font-family:'JetBrains Mono',monospace;color:var(--muted2);margin-bottom:4px">
+        <span>Authenticity score</span><span>${conf}%</span>
+      </div>
+      <div class="meter-bar"><div class="meter-fill ${meterClass}" id="meterFill" style="width:0%"></div></div>
+    </div>
+    <div class="analysis-box" style="margin-bottom:0.75rem">
+      <div class="analysis-title">AI Summary</div>
+      <div class="analysis-text">${escHtml(result.summary || 'No summary provided.')}</div>
+    </div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:0.7rem;color:var(--muted2);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.5rem">Detection Indicators</div>
+    <div class="analysis-indicators">${indicatorsHTML}</div>
+  `;
+
+  setTimeout(() => {
+    const fill = document.getElementById('meterFill');
+    if (fill) fill.style.width = conf + '%';
+  }, 100);
+}
+
+// ---- Upload Zone Drag & Drop ----
+const uploadZone = document.getElementById('uploadZone');
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadZone.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) {
+    const fakeEvent = { target: { files: [file] } };
+    handleImageUpload(fakeEvent);
+  }
+});
+
+// ---- Helpers ----
+function setNewsLoading(on, text) {
+  const el = document.getElementById('newsLoading');
+  el.style.display = on ? 'flex' : 'none';
+  if (text) document.getElementById('newsLoadingText').textContent = text;
+  document.getElementById('checkNewsBtn').disabled = on;
+}
+
+function setNewsLoadingText(t) { document.getElementById('newsLoadingText').textContent = t; }
+
+function showNewsError(msg) {
+  const el = document.getElementById('newsError');
+  el.textContent = '✗ ' + msg;
+  el.style.display = 'block';
+}
+
+function hideNewsError() { document.getElementById('newsError').style.display = 'none'; }
+
+function setDeepfakeLoading(on, text) {
+  const el = document.getElementById('deepfakeLoading');
+  el.style.display = on ? 'flex' : 'none';
+  if (text) document.getElementById('deepfakeLoadingText').textContent = text;
+  document.getElementById('analyzeBtn').disabled = on;
+}
+
+function setDeepfakeLoadingText(t) { document.getElementById('deepfakeLoadingText').textContent = t; }
+
+function showDeepfakeError(msg) {
+  const el = document.getElementById('deepfakeError');
+  el.textContent = '✗ ' + msg;
+  el.style.display = 'block';
+}
+
+function hideDeepfakeError() { document.getElementById('deepfakeError').style.display = 'none'; }
+
+function escHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 </script>
 </body>
 </html>
