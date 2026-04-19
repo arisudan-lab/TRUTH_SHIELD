@@ -1,0 +1,5 @@
+✅ True News Example:
+"U.S. officials said Russia interfered in the 2016 election, prompting an ongoing federal investigation into possible political links."
+
+❌ Fake News Example:
+"Donald Trump was mocked online after an embarrassing incident sparked widespread ridicule and outrage."
